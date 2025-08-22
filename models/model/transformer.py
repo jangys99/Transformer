@@ -12,17 +12,66 @@ class Transformer(nn.Module):
         self.decoder = decoder
         
     
-    def encode(self, x):
-        out = self.encoder(x)   # context를 output
+    def encode(self, src, src_mask):
+        out = self.encoder(src, src_mask)   # context를 output
         return out
     
     
-    def decode(self, z, c):
-        out = self.decoder(z, c)    # context, some sentence(z)를 input / sentence를 output
+    def decode(self, tgt, encoder_out, tgt_mask, src_tgt_mask):
+        out = self.decoder(tgt, encoder_out, tgt_mask, src_tgt_mask)    # context, some sentence(z)를 input / sentence를 output
         return out
     
     
-    def forward(self, x, z):
-        c = self.encode(x)
-        y = self.decode(z, c)
+    def forward(self, src, tgt):
+        src_mask = self.make_src_mask(src)
+        tgt_mask = self.make_tgt_mask(tgt)
+        src_tgt_mask = self.make_src_tgt_mask(src, tgt)
+        encoder_out = self.encode(src, src_mask)
+        y = self.decode(tgt, encoder_out, tgt_mask, src_tgt_mask)
         return y
+    
+    
+    def make_src_mask(self, src):
+        pad_mask = self.make_pad_mask(src, src)
+        return pad_mask
+    
+    
+    def make_tgt_mask(self, tgt):
+        pad_mask = self.make_pad_mask(tgt, tgt)
+        seq_mask = self.make_subsequent_mask(tgt, tgt)
+        mask = pad_mask & seq_mask
+        return pad_mask & seq_mask
+    
+    
+    def make_src_tgt_mask(self, src, tgt):
+        pad_mask = self.make_pad_mask(tgt, src)
+        return pad_mask
+    
+    
+    def make_pad_mask(self, query, key, pad_idx=1):
+        # query : (n_batch, query_seq_len)
+        # key : (n_batch, key_seq_len)
+        query_seq_len, key_seq_len = query.size(1), key.size(1)
+        
+        key_mask = key.ne(pad_idx).unsqueeze(1).unsqueeze(2)    # (n_batch, 1, 1, key_seq_len)
+        key_mask = key_mask.repeat(1, 1, query_seq_len, 1)      # (n_batch, 1, query_seq_len, key_seq_len)
+        
+        query_mask = query.ne(pad_idx).unsqueeze(1).unsqueeze(3)    # (n_batch, 1, query_seq_len, 1)
+        query_mask = query_mask.repeat(1, 1, 1, key_seq_len)    # (n_batch, 1, query_seq_len, key_seq_len)
+
+        mask = key_mask & query_mask
+        mask.requires_grad = False
+        return mask
+    
+    
+    def make_subsequent_mask(query, key):
+        # query : (n_batch, query_seq_len)
+        # key : (n_batch, key_seq_len)
+        query_seq_len, key_seq_len = query.size(1), key.size(1)
+        
+        # 아래 코드 무슨 뜻인지 확인 필요 (np.tril이 하삼각행렬 만드는 함수인듯)
+        tril = np.tril(np.ones((query_seq_len, key_seq_len)), k=0).astype('uint8')
+        mask = torch.tensor(tril, dtype=torch.bool, requires_grad=False, device=query.device)
+        return mask
+    
+    
