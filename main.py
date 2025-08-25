@@ -1,6 +1,6 @@
 import os, sys, time
-import logging
-
+import tqdm
+import wandb
 import torch
 from torch import nn, optim
 
@@ -12,7 +12,29 @@ from utils import get_bleu_score, greedy_decode
 
 DATASET = Multi30k()
 
-
+class EarlyStopping:
+    def __init__(self, mode, patience):
+        self.mode = mode # ['max', 'min']
+        self.score = 0 if mode == 'max' else torch.inf
+        self.patience = patience
+        
+    def update(self, score):
+        if self.mode == 'max':
+            if self.score > score:
+                self.patience -= 1
+            else:
+                self.score = score
+                
+        else:
+            if self.score < score:
+                self.patience -= 1
+            else:
+                self.score = score
+        if self.patience == 0:
+            return True
+        return False
+    
+    
 def train(model, data_loader, optimizer, criterion, epoch, checkpoint_dir):
     model.train()
     epoch_loss = 0
@@ -94,23 +116,40 @@ def main():
 
     train_iter, valid_iter, test_iter = DATASET.get_iter(batch_size=BATCH_SIZE, num_workers=NUM_WORKERS)
 
-    for epoch in range(N_EPOCH):
-        logging.info(f"*****epoch: {epoch:02}*****")
+    epoch_bar = tqdm(range(N_EPOCH))
+    
+    for epoch in epoch_bar:
+        epoch_bar.set_description(f"*****epoch: {epoch:02}*****")
         train_loss = train(model, train_iter, optimizer, criterion, epoch, CHECKPOINT_DIR)
-        logging.info(f"train_loss: {train_loss:.5f}")
+        print(f"train_loss: {train_loss:.5f}")
         valid_loss, bleu_score  = evaluate(model, valid_iter, criterion)
         if epoch > WARM_UP_STEP:
             scheduler.step(valid_loss)
-        logging.info(f"valid_loss: {valid_loss:.5f}, bleu_score: {bleu_score:.5f}")
+        print(f"valid_loss: {valid_loss:.5f}, bleu_score: {bleu_score:.5f}")
+        
+        wandb.log({
+            "epoch": epoch,
+            "train_loss": train_loss,
+            "val_loss": valid_loss,
+            "bleu_score": bleu_score,
+        })
 
-        logging.info(DATASET.translate(model, "A little girl climbing into a wooden playhouse .", greedy_decode))
+        print(DATASET.translate(model, "A little girl climbing into a wooden playhouse .", greedy_decode))
         # expected output: "Ein kleines Mädchen klettert in ein Spielhaus aus Holz ."
-
+        
+        if es.update(valid_loss):
+            break  
+        
     test_loss, bleu_score = evaluate(model, test_iter, criterion)
-    logging.info(f"test_loss: {test_loss:.5f}, bleu_score: {bleu_score:.5f}")
+    print(f"test_loss: {test_loss:.5f}, bleu_score: {bleu_score:.5f}")
     
+    wandb.log({
+        "test_loss": {test_loss},
+        "bleu_score": {bleu_score},
+        })
+    wandb.finish()
     
 if __name__ == "__main__":
     torch.manual_seed(0)
-    logging.basicConfig(level=logging.INFO)
+    es = EarlyStopping(mode='min', patience=10)
     main()

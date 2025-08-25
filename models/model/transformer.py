@@ -32,7 +32,7 @@ class Transformer(nn.Module):
         encoder_out = self.encode(src, src_mask)
         decoder_out = self.decode(tgt, encoder_out, tgt_mask, src_tgt_mask)
         out = self.generator(decoder_out)
-        out = F.log_softmax(out, dim=-1)
+        # out = F.log_softmax(out, dim=-1)
         return out, decoder_out
     
     
