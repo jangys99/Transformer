@@ -69,7 +69,7 @@ class Transformer(nn.Module):
         return mask
     
     
-    def make_subsequent_mask(query, key):
+    def make_subsequent_mask(self, query, key):
         # query : (n_batch, query_seq_len)
         # key : (n_batch, key_seq_len)
         query_seq_len, key_seq_len = query.size(1), key.size(1)

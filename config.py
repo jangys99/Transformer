@@ -1,12 +1,13 @@
 import torch
-
+#재밌는거 하는거 봐라
 DEVICE = torch.device('cuda:0')
 CHECKPOINT_DIR = "./checkpoint"
+VERSION = "v1"
 
-N_EPOCH = 1000
+N_EPOCH = 300
 
-BATCH_SIZE = 2048
-NUM_WORKERS = 8
+BATCH_SIZE = 512
+NUM_WORKERS = 2
 
 LEARNING_RATE = 1e-5
 WEIGHT_DECAY = 5e-4

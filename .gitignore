@@ -4,3 +4,4 @@ __pycache__
 *.out
 checkpoint
 .DS_Store
+.wandb

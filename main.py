@@ -1,8 +1,11 @@
 import os, sys, time
-import tqdm
 import wandb
 import torch
+import warnings
+warnings.filterwarnings('ignore')
+
 from torch import nn, optim
+from tqdm import tqdm
 
 from config import *
 from models.build_model import build_model
@@ -101,6 +104,8 @@ def evaluate(model, data_loader, criterion):
 
 
 def main():
+    wandb.init(project="transformer", entity="youngsoo", name=VERSION)
+
     model = build_model(len(DATASET.vocab_src), len(DATASET.vocab_tgt), device=DEVICE, dr_rate=DROPOUT_RATE)
 
     def initialize_weights(model):
@@ -121,11 +126,10 @@ def main():
     for epoch in epoch_bar:
         epoch_bar.set_description(f"*****epoch: {epoch:02}*****")
         train_loss = train(model, train_iter, optimizer, criterion, epoch, CHECKPOINT_DIR)
-        print(f"train_loss: {train_loss:.5f}")
         valid_loss, bleu_score  = evaluate(model, valid_iter, criterion)
         if epoch > WARM_UP_STEP:
             scheduler.step(valid_loss)
-        print(f"valid_loss: {valid_loss:.5f}, bleu_score: {bleu_score:.5f}")
+        print(f"\ntrain_loss: {train_loss:.5f}, valid_loss: {valid_loss:.5f}, bleu_score: {bleu_score:.5f}")
         
         wandb.log({
             "epoch": epoch,
@@ -150,6 +154,7 @@ def main():
     wandb.finish()
     
 if __name__ == "__main__":
+    
     torch.manual_seed(0)
     es = EarlyStopping(mode='min', patience=10)
     main()
