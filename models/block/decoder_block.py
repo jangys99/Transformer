@@ -7,6 +7,8 @@ from models.layer.residual_connection_layer import ResidualConnectionLayer
 class DecoderBlock(nn.Module):
     '''
     layer normalization, Dropout 적용
+    self_attention, cross_attention 부분이 어떻게 다르게 작동하는지 확인
+    왜 다르게 작동하는지도 생각해보기 (example 정리 참고)
     '''
     def __init__(self, self_attention, cross_attention, position_ff, norm, dr_rate=0):
         super(DecoderBlock, self).__init__()
