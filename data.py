@@ -170,7 +170,7 @@ class Multi30k():
 
     def translate(self, model, src_sentence: str, decode_func):
         model.eval()
-        src = self.transform_src([self.tokenizer_src(src_sentence)]).view(1, -1)
+        src = self.transform_src([self.tokenizer_src(src_sentence)]).view(1, -1)    # 1행 구조로 변형
         num_tokens = src.shape[1]
         tgt_tokens = decode_func(model,
                                  src,

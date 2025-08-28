@@ -57,3 +57,9 @@ def greedy_decode(model, src, max_len, start_symbol, end_symbol):
             break
         
     return ys
+
+
+
+# ys = torch.ones(1, 1).fill_(10).type(torch.long)
+# print(ys)
+
